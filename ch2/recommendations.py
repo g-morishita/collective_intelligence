@@ -75,5 +75,29 @@ def sim_distance(prefs, p1, p2):
     sum_of_squares = np.square([prefs[p1][item] - prefs[p2][item] for item in shared_items]).sum()
     return 1 / ( 1 + sqrt(sum_of_squares) )
 
-import ipdb; ipdb.set_trace()
-print(sim_distance(critics, 'Lisa Rose', 'Gene Seymour'))
+
+def calc_similarity_pearson(prefs, p1, p2):
+    '''
+    Return the Pearson correlation coefficient for person1 and person2
+    '''
+
+    # if they do not have common items, return 0
+    shared_items = get_shared_items(prefs, p1, p2)
+    if len(shared_items) == 0:
+        return 0
+    p1_shared_ratings = np.array([prefs[p1][item] for item in shared_items])
+    p2_shared_ratings = np.array([prefs[p2][item] for item in shared_items])
+    
+    # Strictly spaeking, average ratings should be calculated with shared items only, but we calculate average ratings with all of the items each person rated
+    import ipdb; ipdb.set_trace()
+    p1_ave_rating = np.fromiter(prefs[p1].values(), dtype=np.float32).mean()
+    p2_ave_rating = np.fromiter(prefs[p2].values(), dtype=np.float32).mean()
+
+
+    # calculate each of standard deviation of the ratings 
+    p1_std_rate = np.sqrt((( p1_shared_ratings - p1_ave_rating ) ** 2 ).sum())
+    p2_std_rate = np.sqrt((( p2_shared_ratings - p2_ave_rating ) ** 2 ).sum())
+
+    corr = ((p1_shared_ratings - p1_ave_rating) * (p2_shared_ratings - p2_ave_rating)).sum()
+
+    return corr / ( p1_std_rate * p2_std_rate )
