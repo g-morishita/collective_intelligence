@@ -52,17 +52,22 @@ critics = {
 }
 
 
+def get_shared_items(prefs, p1, p2):
+    '''
+    Get the list of items that both person1 and person2 specified
+    '''
+
+    p1_rated_items = set(prefs[p1].keys())
+    p2_rated_items = set(prefs[p2].keys())
+    return p1_rated_items & p2_rated_items
+
 def sim_distance(prefs, p1, p2):
     '''
     Return a distance-based similarity score for persona1, person2
     '''
 
-    # get the list of shared items
-    p1_rated_items = set(prefs[p1].keys())
-    p2_rated_items = set(prefs[p2].keys())
-    shared_items = p1_rated_items & p2_rated_items
-
     # if they do not have common items, return 0
+    shared_items = get_shared_items(prefs, p1, p2)
     if len(shared_items) == 0:
         return 0
 
