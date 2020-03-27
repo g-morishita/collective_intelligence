@@ -1,3 +1,4 @@
+import re
 from math import sqrt
 from collections import defaultdict
 import numpy as np
@@ -69,7 +70,7 @@ def sim_distance(prefs, p1, p2):
 
     # if they do not have common items, return 0
     shared_items = get_shared_items(prefs, p1, p2)
-    if len(shared_items) == 0:
+    if not shared_items:
         return 0
 
     # Add up the squares of all the distances
@@ -84,7 +85,7 @@ def calc_similarity_pearson(prefs, p1, p2):
 
     # if they do not have common items, return 0
     shared_items = get_shared_items(prefs, p1, p2)
-    if len(shared_items) == 0:
+    if not shared_items:
         return 0
     p1_shared_ratings = np.array([prefs[p1][item] for item in shared_items])
     p2_shared_ratings = np.array([prefs[p2][item] for item in shared_items])
@@ -154,8 +155,89 @@ def transformPrefs(prefs):
 
     return results
 
+
+def create_similar_items_list(prefs, n=10):
+    '''
+    Create a dictionary of items showing which otehr items they are the most similar to
+    '''
+    similar_item_dataset = {}
+
+    # invert the preference matrix to be item-centric
+    item_prefs = transformPrefs(prefs)
+    item_count = 0
+    for item in item_prefs.keys():
+        item_count += 1
+        if ( item_count % 100 == 0 ):
+            print(f"Progress: {item_count} / {len(item_prefs)}")
+
+        # find items similar to this one
+        list_similar_items = top_matches(item_prefs, item, n=n, calc_similarity=sim_distance)
+        similar_item_dataset[item] = list_similar_items
+    
+    return similar_item_dataset
+
+
+def get_recommended_items(prefs, list_similar_items, user):
+    '''
+    get the list of item-Based recommended items
+    '''
+    user_ratings = prefs[user]
+    sum_similarities = defaultdict(float)
+    scores = defaultdict(float)
+
+    # Loop over items rated by this user
+    for (rated_item, rating) in user_ratings.items():
+
+        # Loop over items similar to this item
+        for (similarity, similar_item) in list_similar_items[rated_item]:
+
+            # ignore items the user has already rated
+            if similar_item in user_ratings:
+                continue
+
+            # rate the similar item weighted by similarity 
+            scores[similar_item] += similarity * rating
+            
+            # sum of all the similarity
+            sum_similarities[similar_item] += similarity
+    
+    rankings = [(score / sum_similarities[item], item) for item, score in scores.items()]
+    rankings.sort(reverse=True)
+    return rankings
+
+
+def load_movie_lens(path='./ml-latest-small'):
+    '''
+    load the movie lens dataset
+    '''
+    # get movie titles
+    movies = {}
+    with open(f"{path}/movies.csv", "r") as f:
+        # If a movie title includes a comma, it is double-quoted
+        # So, in this case, find a movie title using regular expression
+        quoted = re.compile('"([^"]*)"')
+        for line in f:
+            movie_title = quoted.findall(line)
+            if movie_title:
+                # the returned type from the regular expression is a list, so take the first value
+                movie_title = movie_title[0]
+                movie_id = line.split(',')[0]
+            else:
+                (movie_id, movie_title) = line.split(',')[0:2]
+            movies[movie_id] = movie_title
+    
+    # load data
+    prefs = defaultdict(dict)
+    with open(f"{path}/ratings.csv", "r") as f:
+        f.readline()
+        for line in f:
+            user_id, movie_id, rating, _ = line.split(',')
+            prefs[user_id][movies[movie_id]] = float(rating)
+    
+    return prefs
+
 from pprint import pprint
-movies = transformPrefs(critics)
-pprint(movies)
-pprint(top_matches(movies, 'Superman Returns'))
-pprint(get_recommendations(movies, 'Just My Luck'))
+movie_lens = load_movie_lens()
+similar_item_list = create_similar_items_list(movie_lens)
+recommended_items = get_recommended_items(movie_lens, similar_item_list, '98')
+pprint(recommended_items)
