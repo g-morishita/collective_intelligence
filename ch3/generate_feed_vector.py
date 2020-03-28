@@ -63,7 +63,7 @@ with open('feedlist.txt', 'r') as feed_urls:
 # create a list of words without ones that appear too frequently or rarely.
 words_list = []
 for word, count in overall_count.items():
-    frac = count / len(feedlist)
+    frac = count / len(word_counts)
     if frac > 0.1 and frac < 0.5:
         words_list.append(word)
 
